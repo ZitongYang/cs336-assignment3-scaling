@@ -1,0 +1,75 @@
+---
+title: "EDA"
+output: html_document
+date: "2024-05-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table)
+library(ggplot2)
+library(psych)
+library(readr)
+```
+
+```{r loaddf, include=FALSE}
+scaling <- read_csv("../data/scaling.csv",
+                    col_types = cols(d_model = col_integer(),
+                                     num_layers = col_integer(),
+                                     num_heads = col_integer(),
+                                     batch_size = col_integer(),
+                                     learning_rate = col_double()))
+df = data.table(scaling)
+```
+
+## cor plots
+```{r cars}
+pairs.panels(df,
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+)
+```
+
+## argmin cor
+
+```{r argmin}
+# Function to find the row with the smallest loss for each unique train_flops
+get_min_loss_per_flop = function(df) {
+  # Find unique values of train_flops
+  unique_flops = unique(df$train_flops)
+  
+  # Initialize an empty data.table to store results
+  result = data.table()
+
+  # Iterate over each unique train_flops value
+  for (flop in unique_flops) {
+    # Subset the data.table for the current train_flops
+    subset_dt = df[train_flops == flop]
+    
+    # Find the row with the smallest loss within the subset
+    min_loss_row = subset_dt[which.min(loss)]
+    
+    # Bind the row with the smallest loss to the result data.table
+    result = rbind(result, min_loss_row)
+  }
+
+  return(result)
+}
+
+# Assuming df is your data.table
+argmin_df = get_min_loss_per_flop(df)
+argmin_df
+```
+
+```{r argmin cor}
+pairs.panels(argmin_df,
+             method = "pearson", # correlation method
+             hist.col = "#00AFBB",
+             density = TRUE,  # show density plots
+             ellipses = TRUE # show correlation ellipses
+)
+```
+
+#
