@@ -55,12 +55,12 @@ def get_row(config):
 
 
 if __name__=='__main__':
-  for d_model in [64, 128, 256, 512, 1024]:
-    for num_layers in [2, 4, 8, 16, 24]:
+  for d_model in [64]:
+    for num_layers in [2, 16, 24]:
       for num_heads in [2, 4, 8, 16]:
-        for batch_size in [128, 256]:
-          for learning_rate in [1e-4, 5e-4, 1e-3]:
-            for train_flops in [1e14]:
+        for batch_size in [128]:
+          for learning_rate in [5e-4, 1e-3]:
+            for train_flops in [int(1e17)]:
               config = {
                 'd_model': d_model,
                 'num_layers': num_layers,

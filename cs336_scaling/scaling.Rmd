@@ -1,5 +1,5 @@
 ---
-title: "EDA"
+title: "Scaling law"
 output: pdf_document
 date: "2024-05-07"
 ---
@@ -26,8 +26,20 @@ df[,log10_loss:=log10(loss)]
 df = df[, .SD, .SDcols = !c("train_flops", "loss")]
 ```
 
+## adaptive collection of more data
+Based on the hyper param trend earlier, up to 1e16 flops the model seems to favor small batch_size, large learning rate, and small d_model. We collect following additional data
+
+```
+  for d_model in [64]:
+    for num_layers in [2, 16, 24]:
+      for num_heads in [2, 4, 8, 16]:
+        for batch_size in [128]:
+          for learning_rate in [5e-4, 1e-3]:
+            for train_flops in [int(1e17)]:
+```
+
 ## cor plots
-We first query select some data with training_flops less then 1e16, which corresponds to 23.6% of total budget. Let's look at the correlation plots. 
+Checking cor plots
 ```{r cars}
 pairs.panels(df,
              method = "pearson", # correlation method
@@ -37,10 +49,8 @@ pairs.panels(df,
 )
 ```
 
-As expected, training flops is the biggest contributor.
-
 ## argmin cor
-Let's take the argmin over all hyperparameters for each training flops, see what the result look like.
+Argmin cor again.
 
 ```{r argmin}
 # Function to find the row with the smallest loss for each unique log10_train_flops
@@ -81,4 +91,26 @@ pairs.panels(argmin_df,
 )
 ```
 
-As we can see, `loss ~ train_flops` follows an almost perfect line.
+## Fitting linear regression
+
+```{r fitting losss, warning=FALSE}
+library(data.table)
+
+# Assuming argmin_df is already your data.table
+# Step 1: Remove the first row where log10_train_flops is 13
+argmin_df_filtered = argmin_df[log10_train_flops != 13.00000 | !seq_len(.N) == 1]
+
+# Step 2: Fit a linear model to the filtered data
+model = lm(log10_loss ~ log10_train_flops, data = argmin_df_filtered)
+
+# Step 3: Predict log10_loss for log10_train_flops = 19 (log10 of 1e19)
+predicted_loss = predict(model, newdata = data.frame(log10_train_flops = 19))
+
+# Print the predicted value
+10**predicted_loss
+```
+
+
+## Conclusion
+
+We choose `num_layers=16, d_model=64, num_heads=8, batch_size=128, learning rate = 1e-3`. We predict the losos to be `2.7`.
